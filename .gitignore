@@ -1,0 +1,24 @@
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+frontend-web/node_modules/
+mobile/node_modules/
+
+# Next.js
+frontend-web/.next/
+frontend-web/out/
+
+# Expo
+mobile/.expo/
+mobile/dist/
+
+# Go
+backend/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
