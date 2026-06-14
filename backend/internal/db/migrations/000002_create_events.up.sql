@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organizer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    community_id UUID,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    venue_name VARCHAR(255),
+    venue_address TEXT,
+    google_place_id VARCHAR(255),
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    starts_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    ends_at TIMESTAMP WITH TIME ZONE,
+    max_participants INTEGER,
+    rsvp_count INTEGER DEFAULT 0,
+    age_min INTEGER,
+    age_max INTEGER,
+    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'cancelled', 'completed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
