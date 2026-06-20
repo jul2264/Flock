@@ -22,3 +22,8 @@ backend/tmp/
 # OS files
 .DS_Store
 Thumbs.db
+
+# AI tools
+CLAUDE.md
+AGENTS.md
+.claude/
