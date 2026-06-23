@@ -56,6 +56,7 @@ func main() {
 
 	// ── Services ─────────────────────────────────────────────────────────────
 	searchService := services.NewSearchService()
+	go searchService.ConfigureSettings()
 	userService := services.NewUserService(database)
 	notificationService := services.NewNotificationService(database)
 	eventService := services.NewEventService(database, searchService, notificationService)
@@ -158,6 +159,7 @@ func main() {
 
 			r.Get("/interests", interestHandler.ListInterests)
 			r.Get("/search", searchHandler.Search)
+			r.Get("/search/autocomplete", searchHandler.Autocomplete)
 		})
 
 		// Tier 1 WRITES (10 req/min limit)

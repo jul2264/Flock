@@ -65,7 +65,7 @@ func (s *EventService) Create(organizerClerkID string, req *models.CreateEventRe
 
 	if s.search != nil {
 		go func(e *models.Event) {
-			if err := s.search.SyncEvent(e); err != nil {
+			if err := s.search.SyncEvent(e, s.getEventInterestIDs(e.ID)); err != nil {
 				log.Printf("Error syncing event to Meilisearch: %v", err)
 			}
 		}(event)
@@ -362,7 +362,7 @@ func (s *EventService) Update(eventID string, userClerkID string, userRole strin
 
 	if s.search != nil && updatedEvent != nil {
 		go func(e *models.Event) {
-			if err := s.search.SyncEvent(e); err != nil {
+			if err := s.search.SyncEvent(e, s.getEventInterestIDs(e.ID)); err != nil {
 				log.Printf("Error syncing event to Meilisearch: %v", err)
 			}
 		}(updatedEvent)
@@ -413,7 +413,7 @@ func (s *EventService) Delete(eventID string, userClerkID string, userRole strin
 				return
 			}
 			if updatedEvent != nil {
-				if err := s.search.SyncEvent(updatedEvent); err != nil {
+				if err := s.search.SyncEvent(updatedEvent, s.getEventInterestIDs(updatedEvent.ID)); err != nil {
 					log.Printf("Error syncing event to Meilisearch: %v", err)
 				}
 			}
@@ -490,4 +490,24 @@ func (s *EventService) sendNearbyAlerts(event *models.Event) {
 	}
 
 	_ = s.notification.SendToTokens(context.Background(), tokens, title, body, data)
+}
+
+func (s *EventService) getEventInterestIDs(eventID string) []string {
+	var interestIDs []string
+	rows, err := s.db.Query(`SELECT interest_id FROM event_interests WHERE event_id = $1`, eventID)
+	if err != nil {
+		return []string{}
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			interestIDs = append(interestIDs, id)
+		}
+	}
+	if interestIDs == nil {
+		return []string{}
+	}
+	return interestIDs
 }

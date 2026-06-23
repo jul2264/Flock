@@ -83,11 +83,15 @@ The backend architecture is structured around standard Go conventions (`models/`
 
 ### 6. Meilisearch Sync & Search
 **Endpoints:**
-- `GET /search?q=query&type=all|events|communities`: Multi-index search query utilizing Meilisearch.
+- `GET /search?q=query&type=all|events|communities&interest_id=uuid&lat=x&lng=y&radius=km`: Multi-index search query with filtering and proximity sorting.
+- `GET /search/autocomplete?q=query&type=all|events|communities`: Low-latency suggestion matches returning top 5 recommendations.
 
 **Key Components:**
-- `services/search.go`: Native HTTP Meilisearch client wrapper that manages index queries, document upserts, and deletions (`SyncEvent`, `DeleteEvent`, `SyncCommunity`, `DeleteCommunity`).
-- **Asynchronous Syncing:** Created, updated, or deleted events/communities automatically sync to Meilisearch inside a background goroutine.
+- `services/search.go`: Native HTTP Meilisearch client wrapper that manages index settings configuration (`ConfigureSettings`), queries (`Search`, `Autocomplete`), document upserts (`SyncEvent`, `SyncCommunity`), and deletions.
+- **Asynchronous Syncing:** Created, updated, or deleted events/communities automatically sync to Meilisearch in a background goroutine.
+- **Advanced Filtering and Proximity Sorting:**
+  - Index settings are configured dynamically on boot to enable filtering/sorting on `interests`, `status`, `visibility`, and `_geo`.
+  - Supports category matching using `interest_id` and spatial queries using `_geoRadius` and `_geoPoint:asc` proximity sorting.
 
 ### 7. Media Uploads (Cloudflare R2 / S3)
 **Endpoints:**
@@ -168,6 +172,7 @@ POST   /interests
 
 # Search
 GET    /search
+GET    /search/autocomplete
 
 # Media Uploads
 POST   /upload/avatar
