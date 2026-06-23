@@ -63,6 +63,7 @@ func main() {
 	communityService := services.NewCommunityService(database, searchService)
 	rsvpService := services.NewRSVPService(database, redisClient, notificationService)
 	interestService := services.NewInterestService(database)
+	adminService := services.NewAdminService(database)
 	storageService, err := services.NewStorageService()
 	if err != nil {
 		log.Printf("Warning: failed to initialize storage service: %v. Media uploads will be unavailable.", err)
@@ -77,6 +78,7 @@ func main() {
 	searchHandler := handlers.NewSearchHandler(searchService)
 	uploadHandler := handlers.NewUploadHandler(storageService)
 	notificationHandler := handlers.NewNotificationHandler(notificationService, communityService, userService)
+	adminHandler := handlers.NewAdminHandler(adminService, eventService)
 
 	// ── Rate Limiting Setup ──────────────────────────────────────────────────
 	redisURL = os.Getenv("REDIS_URL")
@@ -210,10 +212,28 @@ func main() {
 		r.Use(clerkAuth)
 		r.Use(middleware.RequireAuth)
 		r.Use(middleware.RequireRole(database, "admin"))
-		r.Use(writeLimiter) // Admin mutations are writes
 
-		// Seed and manage global interest taxonomy
-		r.Post("/interests", interestHandler.CreateInterest)
+		// Tier 3 READS (100 req/min limit)
+		r.Group(func(r chi.Router) {
+			r.Use(readLimiter)
+
+			r.Get("/admin/users", adminHandler.ListUsers)
+			r.Get("/admin/stats", adminHandler.GetStats)
+		})
+
+		// Tier 3 WRITES (10 req/min limit)
+		r.Group(func(r chi.Router) {
+			r.Use(writeLimiter)
+
+			// Seed and manage global interest taxonomy
+			r.Post("/interests", interestHandler.CreateInterest)
+
+			// User management
+			r.Patch("/admin/users/{id}/role", adminHandler.UpdateUserRole)
+
+			// Event moderation
+			r.Delete("/admin/events/{id}", adminHandler.DeleteEvent)
+		})
 	})
 
 	// Start Event Reminder background worker

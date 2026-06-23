@@ -298,4 +298,103 @@ func TestBackendFlow(t *testing.T) {
 			t.Errorf("expected proficiency 'expert', got %s", resp[0].ProficiencyLevel)
 		}
 	})
+
+	// Instantiate admin handlers/services
+	adminService := services.NewAdminService(db)
+	adminHandler := NewAdminHandler(adminService, eventService)
+
+	// 11. Test ListUsers
+	t.Run("AdminListUsers", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/admin/users?page=1&limit=5", nil)
+		ctx := context.WithValue(req.Context(), middleware.UserIDKey, clerkID)
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		adminHandler.ListUsers(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+
+		var resp models.UsersListResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.Total != 1 {
+			t.Errorf("expected 1 total user, got %d", resp.Total)
+		}
+	})
+
+	// 12. Test UpdateUserRole
+	t.Run("AdminUpdateUserRole", func(t *testing.T) {
+		body := `{"role":"organizer"}`
+		req := httptest.NewRequest("PATCH", "/admin/users/"+userUUID+"/role", strings.NewReader(body))
+		ctx := context.WithValue(req.Context(), middleware.UserIDKey, clerkID)
+		req = req.WithContext(ctx)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("id", userUUID)
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		w := httptest.NewRecorder()
+		adminHandler.UpdateUserRole(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+
+		var resp models.User
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.Role != "organizer" {
+			t.Errorf("expected role organizer, got %s", resp.Role)
+		}
+	})
+
+	// 13. Test GetStats
+	t.Run("AdminGetStats", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/admin/stats", nil)
+		ctx := context.WithValue(req.Context(), middleware.UserIDKey, clerkID)
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+		adminHandler.GetStats(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+
+		var resp models.PlatformStats
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if resp.TotalUsers != 1 {
+			t.Errorf("expected 1 user in stats, got %d", resp.TotalUsers)
+		}
+		if resp.TotalEvents != 1 {
+			t.Errorf("expected 1 event in stats, got %d", resp.TotalEvents)
+		}
+	})
+
+	// 14. Test DeleteEvent (Admin moderation)
+	t.Run("AdminDeleteEvent", func(t *testing.T) {
+		req := httptest.NewRequest("DELETE", "/admin/events/"+eventID, nil)
+		ctx := context.WithValue(req.Context(), middleware.UserIDKey, clerkID)
+		req = req.WithContext(ctx)
+
+		rctx := chi.NewRouteContext()
+		rctx.URLParams.Add("id", eventID)
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		w := httptest.NewRecorder()
+		adminHandler.DeleteEvent(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+	})
 }

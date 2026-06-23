@@ -125,6 +125,18 @@ The backend architecture is structured around standard Go conventions (`models/`
 - **Nearby activity alerts:** Triggers a geo-targeted spatial SQL query (using Haversine calculations) when events are published, pushing alerts to all local matched users who share tagged interests within their custom search radius.
 - **Background Reminders Worker:** Runs a background loop ticking every 5 minutes in a separate goroutine to send reminders to confirmed RSVP attendees 24h and 1h before the event's starts_at time, logging completions in the database to prevent duplicate alerts.
 
+### 10. Administration & Moderation
+**Endpoints:**
+- `GET /admin/users`: Lists all users on the platform with pagination (role-restricted to admin).
+- `PATCH /admin/users/{id}/role`: Updates/moderates user roles (`user`, `organizer`, `admin`).
+- `DELETE /admin/events/{id}`: Moderates/soft-deletes events by cancelling them.
+- `GET /admin/stats`: Compiles high-level platform-wide analytics statistics.
+
+**Key Components:**
+- `models/admin.go`: Maps request payloads for role updates and response representations for statistical metrics and user listings.
+- `services/admin.go`: Handles core administrative SQL execution including paginated lists, updating roles, and querying aggregated metrics across users, events, communities, and RSVPs.
+- `handlers/admin.go`: Exposes admin endpoints under Tier 3 route protection (admin-only).
+
 ---
 
 ## Complete API Route Map
@@ -178,6 +190,12 @@ GET    /search/autocomplete
 POST   /upload/avatar
 POST   /upload/event-banner
 POST   /upload/community-image
+
+# Administration
+GET    /admin/users
+PATCH  /admin/users/{id}/role
+DELETE /admin/events/{id}
+GET    /admin/stats
 
 # WebSocket Realtime (Separate Port 8081)
 WS     /ws?token=<token>
