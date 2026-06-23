@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -10,12 +11,13 @@ import (
 )
 
 type EventService struct {
-	db     *sql.DB
-	search *SearchService
+	db           *sql.DB
+	search       *SearchService
+	notification *NotificationService
 }
 
-func NewEventService(db *sql.DB, search *SearchService) *EventService {
-	return &EventService{db: db, search: search}
+func NewEventService(db *sql.DB, search *SearchService, notification *NotificationService) *EventService {
+	return &EventService{db: db, search: search, notification: notification}
 }
 
 // Create inserts a new event. The user identified by clerkID becomes the organizer.
@@ -67,6 +69,10 @@ func (s *EventService) Create(organizerClerkID string, req *models.CreateEventRe
 				log.Printf("Error syncing event to Meilisearch: %v", err)
 			}
 		}(event)
+	}
+
+	if event.Status == "published" {
+		go s.sendNearbyAlerts(event)
 	}
 
 	return event, nil
@@ -251,6 +257,9 @@ func (s *EventService) Update(eventID string, userClerkID string, userRole strin
 		return nil, err
 	}
 
+	var prevStatus string
+	_ = s.db.QueryRow(`SELECT status FROM events WHERE id = $1`, eventID).Scan(&prevStatus)
+
 	// 3. Ownership check: organizer or admin
 	if organizerID != userID && userRole != "admin" {
 		return nil, fmt.Errorf("forbidden")
@@ -359,6 +368,10 @@ func (s *EventService) Update(eventID string, userClerkID string, userRole strin
 		}(updatedEvent)
 	}
 
+	if updatedEvent != nil && updatedEvent.Status == "published" && prevStatus != "published" {
+		go s.sendNearbyAlerts(updatedEvent)
+	}
+
 	return updatedEvent, nil
 }
 
@@ -425,4 +438,56 @@ func scanEvent(row *sql.Row) (*models.Event, error) {
 		return nil, err
 	}
 	return &e, nil
+}
+
+func (s *EventService) sendNearbyAlerts(event *models.Event) {
+	if s.notification == nil {
+		return
+	}
+
+	if event.Latitude == nil || event.Longitude == nil {
+		return
+	}
+
+	query := `
+		SELECT DISTINCT t.token 
+		FROM user_fcm_tokens t
+		JOIN users u ON t.user_id = u.id
+		JOIN user_interests ui ON u.id = ui.user_id
+		JOIN event_interests ei ON ui.interest_id = ei.interest_id
+		WHERE ei.event_id = $1
+		  AND u.latitude IS NOT NULL 
+		  AND u.longitude IS NOT NULL
+		  AND (6371 * acos(
+		      cos(radians($2)) * cos(radians(u.latitude)) * cos(radians(u.longitude) - radians($3)) +
+		      sin(radians($2)) * sin(radians(u.latitude))
+		  )) <= u.search_radius
+	`
+	rows, err := s.db.Query(query, event.ID, *event.Latitude, *event.Longitude)
+	if err != nil {
+		log.Printf("Error querying nearby FCM tokens: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	var tokens []string
+	for rows.Next() {
+		var token string
+		if err := rows.Scan(&token); err == nil {
+			tokens = append(tokens, token)
+		}
+	}
+
+	if len(tokens) == 0 {
+		return
+	}
+
+	title := "New Event Nearby"
+	body := fmt.Sprintf("A new event matching your interests is happening nearby: '%s'", event.Title)
+	data := map[string]string{
+		"type":     "nearby_event",
+		"event_id": event.ID,
+	}
+
+	_ = s.notification.SendToTokens(context.Background(), tokens, title, body, data)
 }

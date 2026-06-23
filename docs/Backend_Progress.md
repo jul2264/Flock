@@ -64,7 +64,7 @@ The backend architecture is structured around standard Go conventions (`models/`
 
 **Key Components:**
 - `models/rsvp.go`: Mirror definitions of the `rsvps` table and joint representations.
-- `services/rsvps.go`: Database operations for creating, editing, and querying event/user RSVPs. Includes database transaction mapping to update event `rsvp_count` values dynamically and broadcast changes to Redis.
+- `services/rsvps.go`: Database operations for creating, editing, and querying event/user RSVPs. Includes database transaction mapping to update event `rsvp_count` values dynamically and broadcast changes to Redis. Triggers organizer push notifications upon RSVP confirmation.
 - `handlers/rsvps.go`: Exposes RSVP operations and handles response envelopes.
 
 ### 5. Interests Feature
@@ -110,6 +110,17 @@ The backend architecture is structured around standard Go conventions (`models/`
 - **RSVP Broadcaster:** Subscribes to Redis Pub/Sub `event:rsvp_updates` to broadcast live rsvp counts to clients that subscribed (`subscribe_event`).
 - **Community presence:** Allows users to subscribe (`subscribe_community`) to get the initial list of online community members (using optimized `MGet` sets) and receive real-time connection status change broadcasts (`presence_change`).
 
+### 9. Push Notifications (FCM)
+**Endpoints:**
+- `POST /users/me/fcm-token`: Registers/updates the user's active FCM device token.
+- `POST /communities/{id}/announcements`: Broadcasts community announcements via push notification to all members (restricted to owner/admin).
+
+**Key Components:**
+- `services/notification.go`: Integrates with Firebase Admin Go SDK to manage multicast push alerts. Supports automated token cleanup on client failures and defaults to a mock console logger if Firebase account credentials are unset.
+- **RSVP Alerting:** Sends a push notification to event organizers whenever a new user confirms their RSVP.
+- **Nearby activity alerts:** Triggers a geo-targeted spatial SQL query (using Haversine calculations) when events are published, pushing alerts to all local matched users who share tagged interests within their custom search radius.
+- **Background Reminders Worker:** Runs a background loop ticking every 5 minutes in a separate goroutine to send reminders to confirmed RSVP attendees 24h and 1h before the event's starts_at time, logging completions in the database to prevent duplicate alerts.
+
 ---
 
 ## Complete API Route Map
@@ -126,6 +137,7 @@ PATCH  /users/me
 GET    /users/me/rsvps
 GET    /users/me/interests
 POST   /users/me/interests
+POST   /users/me/fcm-token
 
 # Events
 POST   /events
@@ -148,6 +160,7 @@ DELETE /communities/{id}
 POST   /communities/{id}/join
 DELETE /communities/{id}/leave
 GET    /communities/{id}/members
+POST   /communities/{id}/announcements
 
 # Interests
 GET    /interests

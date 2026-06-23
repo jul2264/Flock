@@ -13,12 +13,13 @@ import (
 )
 
 type RSVPService struct {
-	db    *sql.DB
-	redis *redis.Client
+	db           *sql.DB
+	redis        *redis.Client
+	notification *NotificationService
 }
 
-func NewRSVPService(db *sql.DB, rds *redis.Client) *RSVPService {
-	return &RSVPService{db: db, redis: rds}
+func NewRSVPService(db *sql.DB, rds *redis.Client, notification *NotificationService) *RSVPService {
+	return &RSVPService{db: db, redis: rds, notification: notification}
 }
 
 func (s *RSVPService) publishRSVPUpdate(eventID string, rsvpCount int) {
@@ -48,7 +49,8 @@ func (s *RSVPService) Upsert(clerkID string, eventID string, status string) (*mo
 	defer tx.Rollback()
 
 	var userID string
-	err = tx.QueryRow(`SELECT id FROM users WHERE clerk_id = $1`, clerkID).Scan(&userID)
+	var userFullName string
+	err = tx.QueryRow(`SELECT id, COALESCE(full_name, username, 'Someone') FROM users WHERE clerk_id = $1`, clerkID).Scan(&userID, &userFullName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user profile not synced")
@@ -56,9 +58,10 @@ func (s *RSVPService) Upsert(clerkID string, eventID string, status string) (*mo
 		return nil, err
 	}
 
-	// Verify event exists
-	var dummy string
-	err = tx.QueryRow(`SELECT id FROM events WHERE id = $1`, eventID).Scan(&dummy)
+	// Verify event exists and get organizer details
+	var organizerID string
+	var eventTitle string
+	err = tx.QueryRow(`SELECT organizer_id, title FROM events WHERE id = $1`, eventID).Scan(&organizerID, &eventTitle)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("event not found")
@@ -106,6 +109,19 @@ func (s *RSVPService) Upsert(clerkID string, eventID string, status string) (*mo
 
 	// Publish real-time update
 	s.publishRSVPUpdate(eventID, newCount)
+
+	// Send push notification to event organizer if confirmed
+	if status == "confirmed" && s.notification != nil {
+		go func() {
+			title := "New RSVP Confirmed"
+			body := fmt.Sprintf("%s has RSVP'd to your event '%s'", userFullName, eventTitle)
+			data := map[string]string{
+				"type":     "rsvp_confirmation",
+				"event_id": eventID,
+			}
+			_ = s.notification.SendToUser(context.Background(), organizerID, title, body, data)
+		}()
+	}
 
 	return &r, nil
 }

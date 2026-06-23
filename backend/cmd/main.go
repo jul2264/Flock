@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"github.com/jul2264/Flock/backend/internal/handlers"
 	"github.com/jul2264/Flock/backend/internal/middleware"
 	"github.com/jul2264/Flock/backend/internal/services"
+	"github.com/jul2264/Flock/backend/internal/workers"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -55,9 +57,10 @@ func main() {
 	// ── Services ─────────────────────────────────────────────────────────────
 	searchService := services.NewSearchService()
 	userService := services.NewUserService(database)
-	eventService := services.NewEventService(database, searchService)
+	notificationService := services.NewNotificationService(database)
+	eventService := services.NewEventService(database, searchService, notificationService)
 	communityService := services.NewCommunityService(database, searchService)
-	rsvpService := services.NewRSVPService(database, redisClient)
+	rsvpService := services.NewRSVPService(database, redisClient, notificationService)
 	interestService := services.NewInterestService(database)
 	storageService, err := services.NewStorageService()
 	if err != nil {
@@ -72,6 +75,7 @@ func main() {
 	interestHandler := handlers.NewInterestHandler(interestService)
 	searchHandler := handlers.NewSearchHandler(searchService)
 	uploadHandler := handlers.NewUploadHandler(storageService)
+	notificationHandler := handlers.NewNotificationHandler(notificationService, communityService, userService)
 
 	// ── Rate Limiting Setup ──────────────────────────────────────────────────
 	redisURL = os.Getenv("REDIS_URL")
@@ -171,6 +175,7 @@ func main() {
 			r.Delete("/communities/{id}/leave", communityHandler.LeaveCommunity)
 
 			r.Post("/upload/avatar", uploadHandler.GenerateAvatarUploadURL)
+			r.Post("/users/me/fcm-token", notificationHandler.RegisterFCMToken)
 		})
 	})
 
@@ -191,6 +196,7 @@ func main() {
 		r.Post("/communities", communityHandler.CreateCommunity)
 		r.Patch("/communities/{id}", communityHandler.UpdateCommunity)
 		r.Delete("/communities/{id}", communityHandler.DeleteCommunity)
+		r.Post("/communities/{id}/announcements", notificationHandler.SendCommunityAnnouncement)
 
 		// Media Uploads
 		r.Post("/upload/event-banner", uploadHandler.GenerateEventBannerUploadURL)
@@ -207,6 +213,10 @@ func main() {
 		// Seed and manage global interest taxonomy
 		r.Post("/interests", interestHandler.CreateInterest)
 	})
+
+	// Start Event Reminder background worker
+	reminderWorker := workers.NewReminderWorker(database, notificationService)
+	go reminderWorker.Start(context.Background())
 
 	// ── Start server ─────────────────────────────────────────────────────────
 	port := os.Getenv("PORT")
