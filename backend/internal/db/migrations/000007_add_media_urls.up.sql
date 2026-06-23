@@ -1,0 +1,2 @@
+ALTER TABLE events ADD COLUMN IF NOT EXISTS banner_url TEXT;
+ALTER TABLE communities ADD COLUMN IF NOT EXISTS image_url TEXT;

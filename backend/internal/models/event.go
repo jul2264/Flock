@@ -21,6 +21,7 @@ type Event struct {
 	AgeMin         *int       `json:"age_min"`
 	AgeMax         *int       `json:"age_max"`
 	Status         string     `json:"status"`
+	BannerURL      *string    `json:"banner_url"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
@@ -40,6 +41,7 @@ type CreateEventRequest struct {
 	AgeMin         *int       `json:"age_min"`
 	AgeMax         *int       `json:"age_max"`
 	Status         *string    `json:"status"` // Defaults to "draft"
+	BannerURL      *string    `json:"banner_url"`
 }
 
 type UpdateEventRequest struct {
@@ -56,4 +58,19 @@ type UpdateEventRequest struct {
 	AgeMin         *int       `json:"age_min"`
 	AgeMax         *int       `json:"age_max"`
 	Status         *string    `json:"status"`
+	BannerURL      *string    `json:"banner_url"`
+}
+
+type EventFilter struct {
+	Lat        *float64
+	Lng        *float64
+	RadiusKm   *float64
+	InterestID *string
+	AgeMin     *int
+	AgeMax     *int
+	From       *time.Time
+	To         *time.Time
+	Sort       string // "upcoming", "distance", "trending"
+	Limit      int
+	Offset     int
 }

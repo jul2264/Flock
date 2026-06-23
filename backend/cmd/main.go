@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
+	httprateredis "github.com/go-chi/httprate-redis"
 	"github.com/joho/godotenv"
 
 	"github.com/jul2264/Flock/backend/internal/db"
@@ -38,14 +43,60 @@ func main() {
 	communityService := services.NewCommunityService(database, searchService)
 	rsvpService := services.NewRSVPService(database)
 	interestService := services.NewInterestService(database)
+	storageService, err := services.NewStorageService()
+	if err != nil {
+		log.Printf("Warning: failed to initialize storage service: %v. Media uploads will be unavailable.", err)
+	}
 
 	// ── Handlers ─────────────────────────────────────────────────────────────
 	userHandler := handlers.NewUserHandler(userService)
-	eventHandler := handlers.NewEventHandler(eventService)
-	communityHandler := handlers.NewCommunityHandler(communityService)
+	eventHandler := handlers.NewEventHandler(eventService, userService)
+	communityHandler := handlers.NewCommunityHandler(communityService, userService)
 	rsvpHandler := handlers.NewRSVPHandler(rsvpService)
 	interestHandler := handlers.NewInterestHandler(interestService)
 	searchHandler := handlers.NewSearchHandler(searchService)
+	uploadHandler := handlers.NewUploadHandler(storageService)
+
+	// ── Rate Limiting Setup ──────────────────────────────────────────────────
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis://localhost:6379"
+	}
+	u, err := url.Parse(redisURL)
+	var host string = "localhost"
+	var redisPort int = 6379
+	if err == nil {
+		host = u.Hostname()
+		if host == "" {
+			host = "localhost"
+		}
+		if portStr := u.Port(); portStr != "" {
+			if p, err := strconv.Atoi(portStr); err == nil {
+				redisPort = p
+			}
+		}
+	}
+
+	rateLimitRedisConfig := &httprateredis.Config{
+		Host: host,
+		Port: uint16(redisPort),
+	}
+
+	// Read routes: 100 requests per minute
+	readLimiter := httprate.Limit(
+		100,
+		time.Minute,
+		httprate.WithKeyFuncs(httprate.KeyByIP),
+		httprateredis.WithRedisLimitCounter(rateLimitRedisConfig),
+	)
+
+	// Write routes: 10 requests per minute
+	writeLimiter := httprate.Limit(
+		10,
+		time.Minute,
+		httprate.WithKeyFuncs(httprate.KeyByIP),
+		httprateredis.WithRedisLimitCounter(rateLimitRedisConfig),
+	)
 
 	// ── Router ───────────────────────────────────────────────────────────────
 	r := chi.NewRouter()
@@ -60,52 +111,85 @@ func main() {
 		fmt.Fprint(w, `{"status":"ok","service":"Flock API"}`)
 	})
 
-	// ── Protected routes (Clerk JWT required) ────────────────────────────────
+	// Base Clerk auth middleware — applied to all protected groups below
+	clerkAuth := middleware.ClerkMiddleware(os.Getenv("CLERK_SECRET_KEY"))
+
+	// ── Tier 1: User-level routes (any authenticated user) ───────────────────
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.ClerkMiddleware(os.Getenv("CLERK_SECRET_KEY")))
+		r.Use(clerkAuth)
 		r.Use(middleware.RequireAuth)
 
-		// Users
-		r.Route("/users", func(r chi.Router) {
-			r.Post("/sync", userHandler.SyncUser) // upsert user on login
-			r.Get("/me", userHandler.GetMe)        // get own profile
-			r.Patch("/me", userHandler.UpdateMe)   // update own profile
+		// Tier 1 READS (100 req/min limit)
+		r.Group(func(r chi.Router) {
+			r.Use(readLimiter)
+
+			r.Get("/users/me", userHandler.GetMe)
+			r.Get("/users/me/rsvps", rsvpHandler.ListUserRSVPs)
+			r.Get("/users/me/interests", interestHandler.GetUserInterests)
+
+			r.Get("/events", eventHandler.ListEvents)
+			r.Get("/events/{id}", eventHandler.GetEvent)
+			r.Get("/events/{id}/rsvps", rsvpHandler.ListEventRSVPs)
+			r.Get("/events/{id}/interests", interestHandler.GetEventInterests)
+
+			r.Get("/communities", communityHandler.ListCommunities)
+			r.Get("/communities/{id}", communityHandler.GetCommunity)
+			r.Get("/communities/{id}/members", communityHandler.ListCommunityMembers)
+
+			r.Get("/interests", interestHandler.ListInterests)
+			r.Get("/search", searchHandler.Search)
 		})
 
-		// RSVPs
-		r.Get("/users/me/rsvps", rsvpHandler.ListUserRSVPs)
+		// Tier 1 WRITES (10 req/min limit)
+		r.Group(func(r chi.Router) {
+			r.Use(writeLimiter)
 
-		// Events
-		r.Route("/events", func(r chi.Router) {
-			r.Post("/", eventHandler.CreateEvent)
-			r.Get("/", eventHandler.ListEvents)
-			r.Get("/{id}", eventHandler.GetEvent)
+			r.Post("/users/sync", userHandler.SyncUser)
+			r.Patch("/users/me", userHandler.UpdateMe)
+			r.Post("/users/me/interests", interestHandler.SetUserInterests)
 
-			// Nested RSVP endpoints
-			r.Post("/{id}/rsvp", rsvpHandler.CreateRSVP)
-			r.Delete("/{id}/rsvp", rsvpHandler.CancelRSVP)
-			r.Get("/{id}/rsvps", rsvpHandler.ListEventRSVPs)
+			r.Post("/events/{id}/rsvp", rsvpHandler.CreateRSVP)
+			r.Delete("/events/{id}/rsvp", rsvpHandler.CancelRSVP)
 
-			// Nested Interest endpoints
-			r.Get("/{id}/interests", interestHandler.GetEventInterests)
-			r.Post("/{id}/interests", interestHandler.SetEventInterests)
+			r.Post("/communities/{id}/join", communityHandler.JoinCommunity)
+			r.Delete("/communities/{id}/leave", communityHandler.LeaveCommunity)
+
+			r.Post("/upload/avatar", uploadHandler.GenerateAvatarUploadURL)
 		})
+	})
 
-		// Communities
-		r.Route("/communities", func(r chi.Router) {
-			r.Post("/", communityHandler.CreateCommunity)
-			r.Get("/", communityHandler.ListCommunities)
-			r.Get("/{id}", communityHandler.GetCommunity)
-		})
+	// ── Tier 2: Organizer-level routes (organizer or admin) ──────────────────
+	r.Group(func(r chi.Router) {
+		r.Use(clerkAuth)
+		r.Use(middleware.RequireAuth)
+		r.Use(middleware.RequireRole(database, "organizer", "admin"))
+		r.Use(writeLimiter) // Organizer mutations are writes
 
-		// Interests
-		r.Get("/interests", interestHandler.ListInterests)
+		// Create and manage own events
+		r.Post("/events", eventHandler.CreateEvent)
+		r.Patch("/events/{id}", eventHandler.UpdateEvent)
+		r.Delete("/events/{id}", eventHandler.DeleteEvent)
+		r.Post("/events/{id}/interests", interestHandler.SetEventInterests)
+
+		// Create and manage own communities
+		r.Post("/communities", communityHandler.CreateCommunity)
+		r.Patch("/communities/{id}", communityHandler.UpdateCommunity)
+		r.Delete("/communities/{id}", communityHandler.DeleteCommunity)
+
+		// Media Uploads
+		r.Post("/upload/event-banner", uploadHandler.GenerateEventBannerUploadURL)
+		r.Post("/upload/community-image", uploadHandler.GenerateCommunityImageUploadURL)
+	})
+
+	// ── Tier 3: Admin-only routes ─────────────────────────────────────────────
+	r.Group(func(r chi.Router) {
+		r.Use(clerkAuth)
+		r.Use(middleware.RequireAuth)
+		r.Use(middleware.RequireRole(database, "admin"))
+		r.Use(writeLimiter) // Admin mutations are writes
+
+		// Seed and manage global interest taxonomy
 		r.Post("/interests", interestHandler.CreateInterest)
-		r.Get("/users/me/interests", interestHandler.GetUserInterests)
-		r.Post("/users/me/interests", interestHandler.SetUserInterests)
-
-		// Search
-		r.Get("/search", searchHandler.Search)
 	})
 
 	// ── Start server ─────────────────────────────────────────────────────────

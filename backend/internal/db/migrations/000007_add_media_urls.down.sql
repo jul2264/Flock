@@ -1,0 +1,2 @@
+ALTER TABLE events DROP COLUMN IF EXISTS banner_url;
+ALTER TABLE communities DROP COLUMN IF EXISTS image_url;

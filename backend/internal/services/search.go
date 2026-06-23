@@ -66,6 +66,43 @@ func (s *SearchService) SyncCommunity(community *models.Community) error {
 	return s.indexDocument("communities", doc)
 }
 
+// DeleteEvent removes an event document from Meilisearch
+func (s *SearchService) DeleteEvent(eventID string) error {
+	return s.deleteDocument("events", eventID)
+}
+
+// DeleteCommunity removes a community document from Meilisearch
+func (s *SearchService) DeleteCommunity(communityID string) error {
+	return s.deleteDocument("communities", communityID)
+}
+
+
+func (s *SearchService) deleteDocument(indexName string, docID string) error {
+	reqURL := fmt.Sprintf("%s/indexes/%s/documents/%s", s.url, indexName, docID)
+	req, err := http.NewRequest(http.MethodDelete, reqURL, nil)
+	if err != nil {
+		return err
+	}
+
+	if s.masterKey != "" {
+		req.Header.Set("Authorization", "Bearer "+s.masterKey)
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("meilisearch delete returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+
 func (s *SearchService) indexDocument(indexName string, doc map[string]interface{}) error {
 	docs := []map[string]interface{}{doc}
 	body, err := json.Marshal(docs)
