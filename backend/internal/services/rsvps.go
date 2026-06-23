@@ -1,23 +1,54 @@
 package services
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"log"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jul2264/Flock/backend/internal/models"
 )
 
 type RSVPService struct {
-	db *sql.DB
+	db    *sql.DB
+	redis *redis.Client
 }
 
-func NewRSVPService(db *sql.DB) *RSVPService {
-	return &RSVPService{db: db}
+func NewRSVPService(db *sql.DB, rds *redis.Client) *RSVPService {
+	return &RSVPService{db: db, redis: rds}
+}
+
+func (s *RSVPService) publishRSVPUpdate(eventID string, rsvpCount int) {
+	if s.redis == nil {
+		return
+	}
+	payload := map[string]interface{}{
+		"event_id":   eventID,
+		"rsvp_count": rsvpCount,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshalling RSVP update payload: %v", err)
+		return
+	}
+	err = s.redis.Publish(context.Background(), "event:rsvp_updates", data).Err()
+	if err != nil {
+		log.Printf("Error publishing RSVP update to Redis: %v", err)
+	}
 }
 
 func (s *RSVPService) Upsert(clerkID string, eventID string, status string) (*models.RSVP, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	var userID string
-	err := s.db.QueryRow(`SELECT id FROM users WHERE clerk_id = $1`, clerkID).Scan(&userID)
+	err = tx.QueryRow(`SELECT id FROM users WHERE clerk_id = $1`, clerkID).Scan(&userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user profile not synced")
@@ -27,7 +58,7 @@ func (s *RSVPService) Upsert(clerkID string, eventID string, status string) (*mo
 
 	// Verify event exists
 	var dummy string
-	err = s.db.QueryRow(`SELECT id FROM events WHERE id = $1`, eventID).Scan(&dummy)
+	err = tx.QueryRow(`SELECT id FROM events WHERE id = $1`, eventID).Scan(&dummy)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("event not found")
@@ -48,19 +79,46 @@ func (s *RSVPService) Upsert(clerkID string, eventID string, status string) (*mo
 	`
 
 	var r models.RSVP
-	err = s.db.QueryRow(query, eventID, userID, status).Scan(
+	err = tx.QueryRow(query, eventID, userID, status).Scan(
 		&r.ID, &r.EventID, &r.UserID, &r.Status, &r.Attended, &r.CreatedAt, &r.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	// Recalculate event rsvp_count
+	var newCount int
+	err = tx.QueryRow(`
+		UPDATE events
+		SET rsvp_count = (
+			SELECT COUNT(*) FROM rsvps WHERE event_id = $1 AND status = 'confirmed'
+		)
+		WHERE id = $1
+		RETURNING rsvp_count
+	`, eventID).Scan(&newCount)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	// Publish real-time update
+	s.publishRSVPUpdate(eventID, newCount)
+
 	return &r, nil
 }
 
 func (s *RSVPService) Cancel(clerkID string, eventID string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	var userID string
-	err := s.db.QueryRow(`SELECT id FROM users WHERE clerk_id = $1`, clerkID).Scan(&userID)
+	err = tx.QueryRow(`SELECT id FROM users WHERE clerk_id = $1`, clerkID).Scan(&userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user profile not synced")
@@ -68,7 +126,7 @@ func (s *RSVPService) Cancel(clerkID string, eventID string) error {
 		return err
 	}
 
-	res, err := s.db.Exec(
+	res, err := tx.Exec(
 		`UPDATE rsvps SET status = 'cancelled', updated_at = NOW() WHERE event_id = $1 AND user_id = $2`,
 		eventID, userID,
 	)
@@ -83,6 +141,27 @@ func (s *RSVPService) Cancel(clerkID string, eventID string) error {
 	if rows == 0 {
 		return fmt.Errorf("rsvp not found")
 	}
+
+	// Recalculate event rsvp_count
+	var newCount int
+	err = tx.QueryRow(`
+		UPDATE events
+		SET rsvp_count = (
+			SELECT COUNT(*) FROM rsvps WHERE event_id = $1 AND status = 'confirmed'
+		)
+		WHERE id = $1
+		RETURNING rsvp_count
+	`, eventID).Scan(&newCount)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// Publish real-time update
+	s.publishRSVPUpdate(eventID, newCount)
 
 	return nil
 }

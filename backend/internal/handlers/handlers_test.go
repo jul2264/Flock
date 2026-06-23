@@ -58,7 +58,7 @@ func TestBackendFlow(t *testing.T) {
 	userService := services.NewUserService(db)
 	eventService := services.NewEventService(db, nil) // pass nil search client for basic DB testing
 	communityService := services.NewCommunityService(db, nil)
-	rsvpService := services.NewRSVPService(db)
+	rsvpService := services.NewRSVPService(db, nil)
 	interestService := services.NewInterestService(db)
 
 	// Instantiate handlers

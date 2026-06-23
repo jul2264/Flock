@@ -64,7 +64,7 @@ The backend architecture is structured around standard Go conventions (`models/`
 
 **Key Components:**
 - `models/rsvp.go`: Mirror definitions of the `rsvps` table and joint representations.
-- `services/rsvps.go`: Database operations for creating, editing, and querying event/user RSVPs.
+- `services/rsvps.go`: Database operations for creating, editing, and querying event/user RSVPs. Includes database transaction mapping to update event `rsvp_count` values dynamically and broadcast changes to Redis.
 - `handlers/rsvps.go`: Exposes RSVP operations and handles response envelopes.
 
 ### 5. Interests Feature
@@ -99,6 +99,16 @@ The backend architecture is structured around standard Go conventions (`models/`
 - `models/upload.go`: Structures request metadata (`content_type`) and response outputs (`upload_url`, `public_url`).
 - `services/storage.go`: S3-compatible service wrapper using standard AWS SDK v2, supporting configuration overrides for Cloudflare R2, AWS S3, or local MinIO.
 - `handlers/upload.go`: Authenticates and generates unique object storage keys (with extensions mapped from the content-type) returning presigned PUT URLs, preventing file upload bottlenecks on the backend app server.
+
+### 8. WebSocket Server (Realtime)
+**Endpoints:**
+- `WS /ws?token=<jwt>`: Secure WebSocket handshake upgrade connection endpoint (listens on separate port `8081`).
+
+**Key Components:**
+- `cmd/websocket/main.go`: Separate deployable Go WebSocket compute executable.
+- **Presence Tracking:** Client connections automatically set and refresh Redis presence keys (`presence:user:<user_id>`). They also periodically run heartbeats to write `last_seen_at = NOW()` to PostgreSQL.
+- **RSVP Broadcaster:** Subscribes to Redis Pub/Sub `event:rsvp_updates` to broadcast live rsvp counts to clients that subscribed (`subscribe_event`).
+- **Community presence:** Allows users to subscribe (`subscribe_community`) to get the initial list of online community members (using optimized `MGet` sets) and receive real-time connection status change broadcasts (`presence_change`).
 
 ---
 
@@ -150,4 +160,7 @@ GET    /search
 POST   /upload/avatar
 POST   /upload/event-banner
 POST   /upload/community-image
+
+# WebSocket Realtime (Separate Port 8081)
+WS     /ws?token=<token>
 ```

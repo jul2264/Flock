@@ -20,6 +20,7 @@ import (
 	"github.com/jul2264/Flock/backend/internal/handlers"
 	"github.com/jul2264/Flock/backend/internal/middleware"
 	"github.com/jul2264/Flock/backend/internal/services"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -36,12 +37,27 @@ func main() {
 	defer database.Close()
 	db.RunMigrations(database)
 
+	// Connect to Redis
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis://localhost:6379"
+	}
+	redisOpts, err := redis.ParseURL(redisURL)
+	var redisClient *redis.Client
+	if err == nil {
+		redisClient = redis.NewClient(redisOpts)
+		log.Println("Connected to Redis successfully!")
+		defer redisClient.Close()
+	} else {
+		log.Printf("Warning: failed to connect to Redis: %v. Realtime updates may not function.", err)
+	}
+
 	// ── Services ─────────────────────────────────────────────────────────────
 	searchService := services.NewSearchService()
 	userService := services.NewUserService(database)
 	eventService := services.NewEventService(database, searchService)
 	communityService := services.NewCommunityService(database, searchService)
-	rsvpService := services.NewRSVPService(database)
+	rsvpService := services.NewRSVPService(database, redisClient)
 	interestService := services.NewInterestService(database)
 	storageService, err := services.NewStorageService()
 	if err != nil {
@@ -58,7 +74,7 @@ func main() {
 	uploadHandler := handlers.NewUploadHandler(storageService)
 
 	// ── Rate Limiting Setup ──────────────────────────────────────────────────
-	redisURL := os.Getenv("REDIS_URL")
+	redisURL = os.Getenv("REDIS_URL")
 	if redisURL == "" {
 		redisURL = "redis://localhost:6379"
 	}

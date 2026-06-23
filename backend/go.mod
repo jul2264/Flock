@@ -29,6 +29,7 @@ require (
 	github.com/go-chi/httprate-redis v0.7.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 	github.com/golang-migrate/migrate/v4 v4.19.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/lib/pq v1.12.3 // indirect
