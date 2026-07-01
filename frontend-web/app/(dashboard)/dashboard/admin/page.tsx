@@ -83,9 +83,10 @@ export default function AdminPage() {
 			setStats(statsData);
 
 			setSuccessMsg(`User role successfully updated to "${newRole}".`);
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Role update error:", err);
-			setErrorMsg(err.message || "Failed to update user role.");
+			const error = err as Error;
+			setErrorMsg(error.message || "Failed to update user role.");
 		}
 	};
 
@@ -109,9 +110,10 @@ export default function AdminPage() {
 			setStats(statsData);
 
 			setSuccessMsg(`Event "${eventTitle}" has been cancelled/moderated successfully.`);
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Moderation error:", err);
-			setErrorMsg(err.message || "Failed to moderate event.");
+			const error = err as Error;
+			setErrorMsg(error.message || "Failed to moderate event.");
 		}
 	};
 

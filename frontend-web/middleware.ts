@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
 
@@ -9,6 +10,5 @@ export default clerkMiddleware(async (auth, req) => {
 });
 
 export const config = {
-  // Simple matcher pattern that protects dashboard routes and runs cleanly on all Next.js versions.
   matcher: ["/dashboard/:path*"],
 };

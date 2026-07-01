@@ -160,9 +160,10 @@ export default function OrganizerPage() {
 				age_max: "",
 				status: "published",
 			});
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Failed to create event:", err);
-			setErrorMsg(err.message || "Failed to create event. Verify fields.");
+			const error = err as Error;
+			setErrorMsg(error.message || "Failed to create event. Verify fields.");
 		}
 	};
 
@@ -202,9 +203,10 @@ export default function OrganizerPage() {
 				age_max: "",
 				visibility: "public",
 			});
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Failed to create community:", err);
-			setErrorMsg(err.message || "Failed to create community.");
+			const error = err as Error;
+			setErrorMsg(error.message || "Failed to create community.");
 		}
 	};
 
@@ -234,9 +236,10 @@ export default function OrganizerPage() {
 			setShowAnnouncementModal(false);
 			setSuccessMsg("Announcement broadcast successfully to all community members!");
 			setAnnouncementForm({ title: "", body: "" });
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("Announcement error:", err);
-			setErrorMsg(err.message || "Failed to send community announcement.");
+			const error = err as Error;
+			setErrorMsg(error.message || "Failed to send community announcement.");
 		}
 	};
 
@@ -322,7 +325,7 @@ export default function OrganizerPage() {
 				</div>
 			) : (
 				<div className="p-12 rounded-2xl border border-zinc-900 bg-zinc-950/10 text-center space-y-3">
-					<p className="text-sm text-zinc-500">You haven't organized any events yet.</p>
+					<p className="text-sm text-zinc-500">You haven&apos;t organized any events yet.</p>
 					<button
 						onClick={() => setShowEventModal(true)}
 						className="cursor-pointer text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors"
@@ -370,7 +373,7 @@ export default function OrganizerPage() {
 											}`}>
 												{e.status}
 											</span>
-											<span className="text-zinc-400 font-semibold">{e.rsvp_count} RSVP's</span>
+											<span className="text-zinc-400 font-semibold">{e.rsvp_count} RSVP&apos;s</span>
 										</div>
 									</button>
 								);

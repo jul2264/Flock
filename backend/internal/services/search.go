@@ -66,7 +66,7 @@ func (s *SearchService) updateIndexSettings(indexName string, settings map[strin
 	}
 
 	reqURL := fmt.Sprintf("%s/indexes/%s/settings", s.url, indexName)
-	req, err := http.NewRequest(http.MethodPost, reqURL, bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPatch, reqURL, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}

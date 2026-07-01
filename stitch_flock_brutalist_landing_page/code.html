@@ -1,0 +1,328 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Flock | Move Together, Find Your People</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;700;800&amp;family=Geist+Mono:wght@700&amp;family=Hanken+Grotesk:wght@400;500;700&amp;family=JetBrains+Mono:wght@600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#410000",
+                        "on-tertiary-fixed-variant": "#584329",
+                        "on-error": "#ffffff",
+                        "surface": "#fff8f1",
+                        "on-primary": "#ffffff",
+                        "inverse-on-surface": "#f7f0e7",
+                        "on-background": "#1e1b16",
+                        "surface-variant": "#e8e1d9",
+                        "secondary": "#3b6471",
+                        "primary-fixed-dim": "#ffb4a9",
+                        "primary-container": "#7f0303",
+                        "secondary-container": "#bce7f5",
+                        "tertiary-fixed-dim": "#e0c19f",
+                        "secondary-fixed-dim": "#a3cddb",
+                        "surface-container-low": "#faf3e9",
+                        "primary": "#570001",
+                        "background": "#fff8f1",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#eee7de",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#1e1b16",
+                        "on-primary-container": "#ff8372",
+                        "surface-container": "#f4ede4",
+                        "tertiary": "#35240c",
+                        "primary-fixed": "#ffdad5",
+                        "surface-tint": "#b02d21",
+                        "surface-bright": "#fff8f1",
+                        "inverse-primary": "#ffb4a9",
+                        "on-secondary-container": "#3f6875",
+                        "surface-container-highest": "#e8e1d9",
+                        "inverse-surface": "#33302a",
+                        "on-tertiary-fixed": "#281803",
+                        "tertiary-container": "#4d3920",
+                        "on-secondary-fixed-variant": "#214c58",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#8d706c",
+                        "on-secondary-fixed": "#001f27",
+                        "surface-dim": "#e0d9d0",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#bfe9f8",
+                        "on-surface-variant": "#59413d",
+                        "on-tertiary-container": "#bfa382",
+                        "outline-variant": "#e1bfb9",
+                        "on-primary-fixed-variant": "#8e120c",
+                        "tertiary-fixed": "#fdddb9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "0px"
+                    },
+                    "spacing": {
+                        "flat-shadow-offset": "6px",
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "container-max": "1280px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Hanken Grotesk"],
+                        "display-pixel": ["Geist Mono"],
+                        "headline-md": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Geist"],
+                        "body-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-pixel": ["84px", {"lineHeight": "84px", "letterSpacing": "-2px", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["32px", {"lineHeight": "36px", "fontWeight": "800"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "headline-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-1px", "fontWeight": "800"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #fff8f1;
+            color: #1e1b16;
+            overflow-x: hidden;
+        }
+        .neo-shadow {
+            box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+        }
+        .neo-shadow-sm {
+            box-shadow: 3px 3px 0px 0px rgba(0,0,0,1);
+        }
+        .neo-shadow-lg {
+            box-shadow: 10px 10px 0px 0px rgba(0,0,0,1);
+        }
+        .active-push:active {
+            transform: translate(4px, 4px);
+            box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Custom hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .bento-card {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .bento-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px 0px rgba(0,0,0,1);
+        }
+    </style>
+</head>
+<body class="font-body-md bg-background">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-50 bg-surface-container-lowest border-b-2 border-on-background">
+<nav class="flex justify-between items-center w-full px-margin py-4 max-w-container-max mx-auto h-20">
+<div class="flex items-center gap-8">
+<span class="font-display-pixel text-4xl uppercase text-on-surface">Flock</span>
+<div class="hidden lg:flex items-center gap-4">
+<a class="text-on-primary-fixed-variant font-bold border-2 border-on-background bg-primary-fixed shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] px-3 py-1 font-label-sm text-label-sm text-body-md" href="#">About</a>
+<a class="text-on-surface-variant font-medium px-3 py-1 hover:bg-surface-variant hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-[2px] active:translate-y-[2px] font-label-sm text-label-sm text-body-md" href="#">Events</a>
+<a class="text-on-surface-variant font-medium px-3 py-1 hover:bg-surface-variant hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-[2px] active:translate-y-[2px] font-label-sm text-label-sm text-body-md" href="#">Explore</a>
+
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center border-2 border-on-background px-4 py-2 bg-surface">
+<span class="material-symbols-outlined mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 font-label-sm text-label-sm p-0 w-32 lg:w-48" placeholder="Find your flock..." type="text">
+</div>
+<button class="bg-primary-container text-on-primary-container border-2 border-on-background px-6 py-2 neo-shadow-sm font-bold active-push">
+                    Join Flock
+                </button>
+</div>
+</nav>
+</header>
+<main class="max-w-container-max mx-auto px-margin py-12 lg:py-24">
+<!-- Hero Section -->
+<section class="text-center mb-24 relative">
+<div class="absolute -top-12 -left-12 opacity-10 pointer-events-none hidden lg:block">
+<span class="font-display-pixel text-[240px] leading-none uppercase">FLOCK</span>
+</div>
+<div class="relative z-10">
+<div class="inline-block bg-secondary-container border-2 border-on-background px-4 py-1 mb-8 neo-shadow-sm rotate-[-1deg]">
+<span class="font-label-sm text-label-sm text-on-secondary-container uppercase tracking-widest">Communities Reinvented</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg lg:text-[100px] lg:leading-[100px] mb-8 max-w-4xl mx-auto uppercase lg:text-[120px] lg:leading-[110px]">
+                    Move Together, Find Your People.
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-10">
+                    A community discovery platform that helps individuals find local groups, in-person events, and online communities where they can build genuine, long-lasting relationships.
+                </p>
+<div class="flex justify-center items-center">
+<button class="bg-primary-container text-on-primary border-2 border-on-background px-10 py-5 text-xl font-bold neo-shadow active-push flex items-center gap-3">
+                        Find your community
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Bento Grid Section -->
+<!-- Scroll-triggered Slideshow Effect Section -->
+<section class="grid grid-cols-2 lg:grid-cols-4 gap-gutter mb-32"><div class="border-2 border-on-background p-8 bg-surface text-center neo-shadow-sm"><span class="block font-display-pixel text-5xl mb-2 text-6xl">2.5K+</span><p class="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold text-body-md">Communities</p></div><div class="border-2 border-on-background p-8 bg-primary-fixed text-center neo-shadow-sm"><span class="block font-display-pixel text-5xl mb-2 text-6xl">180+</span><p class="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold text-body-md">Cities</p></div><div class="border-2 border-on-background p-8 bg-secondary-fixed text-center neo-shadow-sm"><span class="block font-display-pixel text-5xl mb-2 text-6xl">75+</span><p class="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold text-body-md">Interests</p></div><div class="border-2 border-on-background p-8 bg-tertiary-fixed text-center neo-shadow-sm"><span class="block font-display-pixel text-5xl mb-2 text-6xl">120K+</span><p class="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold text-body-md">Members</p></div></section><div class="flex justify-end -mt-24 mb-24 px-2">
+    <p class="font-label-sm text-[10px] text-on-surface-variant opacity-60 italic">
+        *for representative purposes only
+    </p>
+</div><section class="mb-32 overflow-hidden border-4 border-on-background bg-surface-dim p-2 neo-shadow-lg">
+<div class="bg-background border-2 border-on-background py-16 px-8 relative">
+<div class="flex items-center justify-between mb-12 px-8">
+<h2 class="font-headline-lg text-headline-lg max-w-xl text-5xl">Find Your Vibe</h2>
+<div class="flex gap-4">
+<button class="p-4 border-2 border-on-background bg-surface active-push hover:bg-surface-variant">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-4 border-2 border-on-background bg-surface active-push hover:bg-surface-variant">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="flex gap-gutter overflow-x-auto no-scrollbar pb-8 px-8 snap-x" id="slideshow">
+<div class="snap-center flex-none w-[300px] lg:w-[400px]">
+<div class="aspect-[4/5] border-2 border-on-background neo-shadow-sm relative mb-4">
+<img class="w-full h-full object-cover" data-alt="Artistic workshop setting with pottery wheels and clay, soft diffused natural light from large windows, minimalist aesthetic with pops of maroon and teal, clean black borders around every object." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9AEOoIPgzhqzhOOuhkVgX1YowRDbmQQUtHgw3TKJzmbcYUwNKt0u1ybxOlsXeJzorGRBL7dZ1wbbQbgP5_n3vUfwnaOIb0IM6HgLGZaG7DuQfdPips05FYr6bWARamc4XSbdoz1-17zQJShn6-BKPUXTQbV2Kg6qb1uj1p4QHQ4S07DP3CqLNXD_1zjgFG7FBAF44DLpMpz635YkxDiwx60YNRBZCZcNsbXZsdX8kdvuk9P6vEfx7gqqeM-915kzCnAyWOoy_eMOa">
+<span class="absolute top-4 left-4 bg-tertiary-fixed border-2 border-on-background px-3 py-1 font-label-sm text-label-sm">Workshop</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-3xl">Pottery &amp; Pints</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase text-body-md">Downtown Studio</p>
+</div>
+<div class="snap-center flex-none w-[300px] lg:w-[400px]">
+<div class="aspect-[4/5] border-2 border-on-background neo-shadow-sm relative mb-4">
+<img class="w-full h-full object-cover" data-alt="High-contrast close up of a retro synthesizer and mixing board, neon light accents in a dark studio room, neo-brutalist style product photography, sharp focus, technical atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwCLvt55iLgXvTUzZ17edMOZxQFdV5gS1Fqj0CB4ozfE8zyiyIcNNRKt0FvzWZx4Oytb2lS0o6bXhAgrff9TumOrqNLNI3Iz03z491j47g_gUbN0aCZWCDEIIvLnEzu4h5sy0BVzBZ-5lWwlucdXxXEtjc341c6jWM0eOQIjg-yb1JRhLEGAiREH5_TnR_3nSMttqvb2XZUN4NSL7bF0WAk0wlVwit2WQ2jZEJyrkfs9-0bYoUOo9I90Wt13v9VoxcpSwNqAD9Bn86">
+<span class="absolute top-4 left-4 bg-secondary-fixed border-2 border-on-background px-3 py-1 font-label-sm text-label-sm">Music Tech</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-3xl">Synth Sundays</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase text-body-md">Community Center</p>
+</div>
+<div class="snap-center flex-none w-[300px] lg:w-[400px]">
+<div class="aspect-[4/5] border-2 border-on-background neo-shadow-sm relative mb-4">
+<img class="w-full h-full object-cover" data-alt="Outdoor public square filled with colorful market stalls and people browsing, bright midday sun, deep shadows, vibrant urban lifestyle photography, minimalist neo-brutalist framing." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKGf8AuqceZdLVY9gk-JJ4RTiYf5cHbItAkRfQSyNc_uAkCuSUm9uwzbHmZAjgIeyW-DpDuaT13EEynLq9yry58-lsUZrRlS0iIovmwwWu7tdoL8xarRYvpGXP5n6oTcDfGgCw5S7rqvD19ePfieIs94F01lEfnei38uDa3Yn-irZJfHSDVwkm4v4xkxN97BJMo4EJoDVhIrt4KOxr67OcwmTsGQW9ONb_g8wzHQyUHZKRh-Kh17qduCqHXY3Pmt3wkL2s1PR5kKxd">
+<span class="absolute top-4 left-4 bg-primary-fixed border-2 border-on-background px-3 py-1 font-label-sm text-label-sm">Social</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-3xl">Market Meetup</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase text-body-md">East Plaza</p>
+</div>
+<div class="snap-center flex-none w-[300px] lg:w-[400px]">
+<div class="aspect-[4/5] border-2 border-on-background neo-shadow-sm relative mb-4">
+<img class="w-full h-full object-cover" data-alt="Professional office setup with minimalist wooden desks and monitors, plants in geometric pots, high-key white lighting, sophisticated professional environment, clean black outlines." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBH2RRVsXt0wiyhpClDCMiLPfOqJX5_8XO52DIFRlkWUXKxN1DOlPzLV89TrACZ6qprhxh0O9JEp0Gptrrz7rJyRsDY184qY5Yc_gJC0XkBhrms_wH9wQfQiBRmCyfQXFE4rsW9T1-4b4nu1EDoZpZBTjL63y-N5s83ET1sZ1H9Ue4CIsA5MpLyJPPQz7Ltt40s7JfS5kp8W0oHB5rj6VJk7mzmbydGPiBsjeUWPUXT_fQ4vMbX5WdL3Gzl8SehZt4LTqWBfOPVKZeN">
+<span class="absolute top-4 left-4 bg-surface-variant border-2 border-on-background px-3 py-1 font-label-sm text-label-sm">Business</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-3xl">Founder Circles</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase text-body-md">The Hub</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Section (Grid) -->
+<!-- Call to Action Banner -->
+
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-highest border-t-4 border-on-background w-full">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter px-margin py-12 w-full max-w-container-max mx-auto">
+<div>
+<span class="font-headline-md text-headline-md font-black text-on-surface block mb-6 uppercase">FLOCK</span>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6">Building the infrastructure for human connection in the digital age.</p>
+<div class="flex gap-4">
+<a class="w-10 h-10 bg-on-background flex items-center justify-center text-surface active-push" href="#">
+<span class="material-symbols-outlined">public</span>
+</a>
+<a class="w-10 h-10 bg-on-background flex items-center justify-center text-surface active-push" href="#">
+<span class="material-symbols-outlined">alternate_email</span>
+</a>
+</div>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm font-bold uppercase mb-6 text-on-surface text-body-md">Platform</h4>
+<ul class="space-y-3 font-label-sm text-label-sm text-body-md">
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Local Groups</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Events</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Online Hubs</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Success Stories</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm font-bold uppercase mb-6 text-on-surface text-body-md">Community</h4>
+<ul class="space-y-3 font-label-sm text-label-sm text-body-md">
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors font-bold underline text-primary" href="#">Community Guidelines</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Safety Center</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm font-bold uppercase mb-6 text-on-surface text-body-md">Resources</h4>
+<ul class="space-y-3 font-label-sm text-label-sm text-body-md">
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Help Center</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Contact Us</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Twitter</a></li>
+<li class=""><a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Discord</a></li>
+</ul>
+</div>
+</div>
+<div class="px-margin py-8 border-t-2 border-on-background max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant">© 2024 Flock Community Discovery. Built for Connection.</p>
+<div class="flex gap-6 font-label-sm text-label-sm">
+</div>
+</div>
+</footer>
+<script>
+        // Slideshow controls
+        const slideshow = document.getElementById('slideshow');
+        const scrollBtns = document.querySelectorAll('section button');
+        
+        // Basic scroll interaction for buttons
+        if(scrollBtns.length > 0) {
+            scrollBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const direction = btn.innerHTML.includes('left') ? -1 : 1;
+                    slideshow.scrollBy({ left: 320 * direction, behavior: 'smooth' });
+                });
+            });
+        }
+
+        // Add scroll animation triggers for neo-brutalist blocks
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = "1";
+                    entry.target.style.transform = "translateY(0)";
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.bento-card').forEach(card => {
+            card.style.opacity = "0";
+            card.style.transform = "translateY(20px)";
+            card.style.transition = "all 0.6s cubic-bezier(0.23, 1, 0.32, 1)";
+            observer.observe(card);
+        });
+    </script>
+
+
+</body></html>
